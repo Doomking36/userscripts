@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Strict Block Redirects and New Tabs
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  Strictly block redirects and new tabs, allow user to decide, with a list of trusted domains
 // @author       Your Name
 // @match        *://*/*
@@ -27,11 +27,23 @@
     }
 
     function interceptEvent(event) {
-        const url = event.target.href || event.target.action;
+        const target = event.target;
+        let url = '';
+
+        if (target.tagName === 'A') {
+            url = target.href;
+        } else if (target.tagName === 'FORM') {
+            url = target.action;
+        }
+
         if (url && !isTrustedDomain(url)) {
             event.preventDefault();
             if (confirmRedirect(url)) {
-                window.location.href = url;
+                if (target.tagName === 'A') {
+                    window.location.href = url;
+                } else if (target.tagName === 'FORM') {
+                    target.submit();
+                }
             }
         }
     }
