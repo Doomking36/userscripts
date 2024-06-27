@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.9
+// @version      2.1
 // @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action with the redirect URL displayed clearly and securely, except for trusted domains/websites.
 // @author       Your Name
 // @match        *://*/*
@@ -19,23 +19,17 @@
     ];
 
     function isTrusted(url) {
-        const link = document.createElement('a');
-        link.href = url;
-        return trustedDomains.includes(link.hostname);
-    }
-
-    function isValidURL(url) {
         try {
-            new URL(url);
-            return true;
-        } catch (_) {
+            const link = new URL(url);
+            return trustedDomains.includes(link.hostname);
+        } catch {
             return false;
         }
     }
 
     function handleBeforeUnload(event) {
         if (isTrusted(window.location.href)) {
-            return true;
+            return;
         }
         event.preventDefault();
         event.returnValue = '';
@@ -43,29 +37,19 @@
         const confirmed = confirm(message);
         if (confirmed) {
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            return true;
-        } else {
-            return false;
         }
     }
 
     function handleLinkClick(event) {
         if (event.target.tagName === 'A' && event.target.href) {
-            if (event.target.target === '_blank' && !isTrusted(event.target.href)) {
+            if (!isTrusted(event.target.href)) {
                 event.preventDefault();
-                if (isValidURL(event.target.href)) {
-                    const message = `Are you sure you want to open this link in a new tab?\n\nURL: ${event.target.href}`;
-                    const confirmed = confirm(message);
-                    if (confirmed) {
+                const message = `Are you sure you want to open this link?\n\nURL: ${event.target.href}`;
+                const confirmed = confirm(message);
+                if (confirmed) {
+                    if (event.target.target === '_blank') {
                         window.open(event.target.href, '_blank');
-                    }
-                }
-            } else if (!isTrusted(event.target.href)) {
-                event.preventDefault();
-                if (isValidURL(event.target.href)) {
-                    const message = `Are you sure you want to navigate to this link?\n\nURL: ${event.target.href}`;
-                    const confirmed = confirm(message);
-                    if (confirmed) {
+                    } else {
                         window.location.href = event.target.href;
                     }
                 }
@@ -76,12 +60,10 @@
     function handleFormSubmit(event) {
         if (!isTrusted(event.target.action)) {
             event.preventDefault();
-            if (isValidURL(event.target.action)) {
-                const message = `Are you sure you want to submit this form?\n\nAction: ${event.target.action}`;
-                const confirmed = confirm(message);
-                if (confirmed) {
-                    event.target.submit();
-                }
+            const message = `Are you sure you want to submit this form?\n\nAction: ${event.target.action}`;
+            const confirmed = confirm(message);
+            if (confirmed) {
+                event.target.submit();
             }
         }
     }
