@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Blocks website redirects or new tabs and provides a confirmation popup box to accept or deny the action.
-// @author       Doomking
+// @author       Your Name
 // @match        *://*/*
 // @exclude      *://www.google.com/*
 // @exclude      *://www.youtube.com/*
@@ -35,6 +35,7 @@
         }
         #popupMessage {
             margin-bottom: 20px;
+            word-wrap: break-word;
         }
         #popupButtons {
             text-align: center;
@@ -105,7 +106,11 @@
         event.stopPropagation();
         createPopup(message, (confirmed) => {
             if (confirmed) {
-                window.location.href = event.target.href || event.target.action;
+                if (event.type === 'beforeunload') {
+                    window.location.href = event.target.href || event.target.action;
+                } else if (event.target.tagName === 'A') {
+                    window.open(event.target.href, '_blank');
+                }
             }
         });
     }
