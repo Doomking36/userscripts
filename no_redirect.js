@@ -1,9 +1,8 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      2.1
-// @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action with the redirect URL displayed clearly and securely, except for trusted domains/websites.
-// @author       Your Name
+// @version      2.3
+// @description  Provides a confirmation dialog for untrusted domains when links are clicked or forms are submitted, except for trusted domains/websites.
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
@@ -27,38 +26,24 @@
         }
     }
 
-    function handleBeforeUnload(event) {
-        if (isTrusted(window.location.href)) {
-            return;
-        }
-        event.preventDefault();
-        event.returnValue = '';
-        const message = 'Are you sure you want to leave this page?';
-        const confirmed = confirm(message);
-        if (confirmed) {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        }
-    }
-
     function handleLinkClick(event) {
-        if (event.target.tagName === 'A' && event.target.href) {
-            if (!isTrusted(event.target.href)) {
-                event.preventDefault();
-                const message = `Are you sure you want to open this link?\n\nURL: ${event.target.href}`;
-                const confirmed = confirm(message);
-                if (confirmed) {
-                    if (event.target.target === '_blank') {
-                        window.open(event.target.href, '_blank');
-                    } else {
-                        window.location.href = event.target.href;
-                    }
+        const anchor = event.target.closest('a');
+        if (anchor && anchor.href && !isTrusted(anchor.href)) {
+            event.preventDefault();
+            const message = `Are you sure you want to open this link?\n\nURL: ${anchor.href}`;
+            const confirmed = confirm(message);
+            if (confirmed) {
+                if (anchor.target === '_blank') {
+                    window.open(anchor.href, '_blank');
+                } else {
+                    window.location.href = anchor.href;
                 }
             }
         }
     }
 
     function handleFormSubmit(event) {
-        if (!isTrusted(event.target.action)) {
+        if (event.target.action && !isTrusted(event.target.action)) {
             event.preventDefault();
             const message = `Are you sure you want to submit this form?\n\nAction: ${event.target.action}`;
             const confirmed = confirm(message);
@@ -68,11 +53,19 @@
         }
     }
 
-    function attachEventListeners() {
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        document.addEventListener('click', handleLinkClick, true);
-        document.addEventListener('submit', handleFormSubmit, true);
+    function handleBeforeUnload(event) {
+        if (!isTrusted(window.location.href)) {
+            event.preventDefault();
+            event.returnValue = '';
+            const message = 'Are you sure you want to leave this page?';
+            const confirmed = confirm(message);
+            if (confirmed) {
+                window.removeEventListener('beforeunload', handleBeforeUnload);
+            }
+        }
     }
 
-    attachEventListeners();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleLinkClick, true);
+    document.addEventListener('submit', handleFormSubmit, true);
 })();
