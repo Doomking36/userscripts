@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action.
 // @author       Your Name
 // @match        *://*/*
@@ -41,7 +41,32 @@
         }
     }
 
-    // Add event listeners to block redirects and new tabs
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('click', handleLinkClick);
+    // Function to handle form submissions
+    function handleFormSubmit(event) {
+        event.preventDefault();
+        const message = `Are you sure you want to submit this form?\n\n${event.target.action}`;
+        const confirmed = confirm(message);
+        if (confirmed) {
+            event.target.submit();
+        }
+    }
+
+    // Attach event listeners to existing elements
+    function attachEventListeners() {
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('click', handleLinkClick);
+        document.addEventListener('submit', handleFormSubmit);
+    }
+
+    // Attach event listeners to dynamically created elements
+    function observeDOMChanges() {
+        const observer = new MutationObserver(() => {
+            attachEventListeners();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // Initial setup
+    attachEventListeners();
+    observeDOMChanges();
 })();
