@@ -1,31 +1,27 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.7
-// @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action with the redirect URL displayed clearly and securely.
+// @version      1.8
+// @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action with the redirect URL displayed clearly and securely, except for trusted domains/websites.
 // @author       Your Name
 // @match        *://*/*
-// @exclude      *://www.google.com/*
-// @exclude      *://www.youtube.com/*
-// @exclude      *://www.github.com/*
-// @exclude      *://www.reddit.com/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    const excludedDomains = [
+    const trustedDomains = [
         'www.google.com',
         'www.youtube.com',
         'www.github.com',
         'www.reddit.com'
     ];
 
-    function isExcluded(url) {
+    function isTrusted(url) {
         const link = document.createElement('a');
         link.href = url;
-        return excludedDomains.includes(link.hostname);
+        return trustedDomains.includes(link.hostname);
     }
 
     function isValidURL(url) {
@@ -38,7 +34,7 @@
     }
 
     function handleBeforeUnload(event) {
-        if (isExcluded(window.location.href)) {
+        if (isTrusted(window.location.href)) {
             return true;
         }
         event.preventDefault();
@@ -54,7 +50,7 @@
     }
 
     function handleLinkClick(event) {
-        if (event.target.tagName === 'A' && event.target.target === '_blank' && !isExcluded(event.target.href)) {
+        if (event.target.tagName === 'A' && event.target.target === '_blank' && !isTrusted(event.target.href)) {
             event.preventDefault();
             if (isValidURL(event.target.href)) {
                 const message = `Are you sure you want to open this link in a new tab?\n\nURL: ${event.target.href}`;
@@ -67,7 +63,7 @@
     }
 
     function handleFormSubmit(event) {
-        if (!isExcluded(event.target.action)) {
+        if (!isTrusted(event.target.action)) {
             event.preventDefault();
             if (isValidURL(event.target.action)) {
                 const message = `Are you sure you want to submit this form?\n\nAction: ${event.target.action}`;
