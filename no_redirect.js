@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.4
 // @description  Provides a confirmation dialog for untrusted domains when links are clicked or forms are submitted, except for trusted domains/websites.
 // @match        *://*/*
 // @grant        none
