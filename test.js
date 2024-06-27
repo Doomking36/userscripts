@@ -30,7 +30,6 @@
         const url = event.target.href || event.target.action;
         if (url && !isTrustedDomain(url)) {
             event.preventDefault();
-            event.stopImmediatePropagation();
             if (confirmRedirect(url)) {
                 window.location.href = url;
             }
@@ -61,14 +60,14 @@
     const originalLocationAssign = window.location.assign;
     window.location.assign = function(url) {
         if (confirmRedirect(url)) {
-            return originalLocationAssign.call(window.location, url);
+            originalLocationAssign.call(window.location, url);
         }
     };
 
     const originalLocationReplace = window.location.replace;
     window.location.replace = function(url) {
         if (confirmRedirect(url)) {
-            return originalLocationReplace.call(window.location, url);
+            originalLocationReplace.call(window.location, url);
         }
     };
 
