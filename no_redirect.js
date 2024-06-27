@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.8
+// @version      1.9
 // @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action with the redirect URL displayed clearly and securely, except for trusted domains/websites.
 // @author       Your Name
 // @match        *://*/*
@@ -50,13 +50,24 @@
     }
 
     function handleLinkClick(event) {
-        if (event.target.tagName === 'A' && event.target.target === '_blank' && !isTrusted(event.target.href)) {
-            event.preventDefault();
-            if (isValidURL(event.target.href)) {
-                const message = `Are you sure you want to open this link in a new tab?\n\nURL: ${event.target.href}`;
-                const confirmed = confirm(message);
-                if (confirmed) {
-                    window.open(event.target.href, '_blank');
+        if (event.target.tagName === 'A' && event.target.href) {
+            if (event.target.target === '_blank' && !isTrusted(event.target.href)) {
+                event.preventDefault();
+                if (isValidURL(event.target.href)) {
+                    const message = `Are you sure you want to open this link in a new tab?\n\nURL: ${event.target.href}`;
+                    const confirmed = confirm(message);
+                    if (confirmed) {
+                        window.open(event.target.href, '_blank');
+                    }
+                }
+            } else if (!isTrusted(event.target.href)) {
+                event.preventDefault();
+                if (isValidURL(event.target.href)) {
+                    const message = `Are you sure you want to navigate to this link?\n\nURL: ${event.target.href}`;
+                    const confirmed = confirm(message);
+                    if (confirmed) {
+                        window.location.href = event.target.href;
+                    }
                 }
             }
         }
