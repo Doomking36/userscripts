@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Strict Block Redirects and New Tabs
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @description  Strictly block redirects and new tabs, allow user to decide, with a list of trusted domains
 // @author       Your Name
 // @match        *://*/*
@@ -24,7 +24,7 @@
         if (!isTrustedDomain(url)) {
             if (!confirm(`The website is attempting to redirect to:\n\n${url}\n\nDo you want to proceed?`)) {
                 window.stop();
-                return false;
+                throw new Error(`Blocked redirect to: ${url}`);
             }
         }
         return true;
@@ -56,7 +56,7 @@
         }
     }, true);
 
-    // Intercept window open
+    // Intercept window.open
     const originalWindowOpen = window.open;
     window.open = function(url, ...rest) {
         if (confirmRedirect(url)) {
@@ -94,13 +94,13 @@
     ['pushState', 'replaceState'].forEach(method => {
         const originalMethod = history[method];
         history[method] = function(state, title, url) {
-            if (confirmRedirect(url)) {
+            if (url && confirmRedirect(url)) {
                 return originalMethod.apply(history, arguments);
             }
         };
     });
 
-    // Monitor changes in the DOM
+    // MutationObserver to monitor dynamic changes
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.type === 'childList' && mutation.addedNodes.length) {
@@ -117,10 +117,14 @@
                     }
                 });
             }
+            if (mutation.type === 'attributes' && (mutation.target.tagName === 'A' || mutation.target.tagName === 'FORM')) {
+                mutation.target.addEventListener('click', interceptEvent, true);
+                mutation.target.addEventListener('submit', interceptEvent, true);
+            }
         });
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
 
     // Monitor location changes frequently
     let lastUrl = location.href;
