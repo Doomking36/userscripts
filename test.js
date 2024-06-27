@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Strict Block Redirects and New Tabs
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Strictly block redirects and new tabs, allow user to decide, with a list of trusted domains
 // @author       Your Name
 // @match        *://*/*
@@ -138,7 +138,18 @@
             if (mutation.type === 'childList' && mutation.addedNodes.length) {
                 Array.from(mutation.addedNodes).forEach((node) => {
                     if (node.tagName === 'A' || node.tagName === 'FORM') {
-                        interceptEvent({ target: node });
+                        node.addEventListener('click', interceptEvent, true);
+                        node.addEventListener('submit', interceptEvent, true);
+                    }
+                    if (node.tagName && node.tagName !== 'SCRIPT') {
+                        const links = node.getElementsByTagName('a');
+                        for (let link of links) {
+                            link.addEventListener('click', interceptEvent, true);
+                        }
+                        const forms = node.getElementsByTagName('form');
+                        for (let form of forms) {
+                            form.addEventListener('submit', interceptEvent, true);
+                        }
                     }
                 });
             }
