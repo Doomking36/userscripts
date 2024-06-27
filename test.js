@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Block Redirects and New Tabs
+// @name         Strict Block Redirects and New Tabs
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Block redirects and new tabs, allow user to decide, with a list of trusted domains
+// @version      1.2
+// @description  Strictly block redirects and new tabs, allow user to decide, with a list of trusted domains
 // @author       Your Name
 // @match        *://*/*
 // @grant        none
@@ -110,16 +110,27 @@
         };
     });
 
-    // Monitor immediate location changes
-    setInterval(() => {
-        if (!isTrustedDomain(window.location.href)) {
-            const currentHref = window.location.href;
-            if (confirm(`The website is attempting to redirect to:\n\n${currentHref}\n\nDo you want to proceed?`)) {
-                window.location.href = currentHref;
-            } else {
+    // Function to handle location changes
+    function handleLocationChange(url) {
+        if (!isTrustedDomain(url)) {
+            if (!confirm(`The website is attempting to redirect to:\n\n${url}\n\nDo you want to proceed?`)) {
                 window.stop();
+                throw new Error(`Blocked redirect to: ${url}`);
             }
         }
-    }, 1000);
+    }
+
+    // Continuously monitor location changes
+    setInterval(() => {
+        const currentHref = window.location.href;
+        handleLocationChange(currentHref);
+    }, 500);
+
+    // Additional event listeners for other potential redirects
+    ['beforeunload', 'unload', 'popstate', 'hashchange'].forEach((eventType) => {
+        window.addEventListener(eventType, (event) => {
+            handleLocationChange(window.location.href);
+        }, true);
+    });
 
 })();
