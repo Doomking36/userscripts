@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Blocks website redirects or new tabs and provides a confirmation popup box to accept or deny the action.
 // @author       Your Name
 // @match        *://*/*
@@ -100,32 +100,34 @@
         document.body.appendChild(popup);
     }
 
-    // Function to block redirect or new tab
-    function blockAction(event, message) {
+    // Function to handle beforeunload event
+    function handleBeforeUnload(event) {
         event.preventDefault();
-        event.stopPropagation();
-        createPopup(message, (confirmed) => {
+        event.returnValue = '';
+        createPopup('Are you sure you want to leave this page?', (confirmed) => {
             if (confirmed) {
-                if (event.type === 'beforeunload') {
-                    window.location.href = event.target.href || event.target.action;
-                } else if (event.target.tagName === 'A') {
-                    window.open(event.target.href, '_blank');
-                }
+                window.removeEventListener('beforeunload', handleBeforeUnload);
+                window.location.href = event.target.href || event.target.action;
             }
         });
     }
 
-    // Add event listeners to block redirects and new tabs
-    window.addEventListener('beforeunload', (event) => {
-        blockAction(event, 'Are you sure you want to leave this page?');
-    });
-
-    document.addEventListener('click', (event) => {
+    // Function to handle link clicks
+    function handleLinkClick(event) {
         if (event.target.tagName === 'A' && event.target.target === '_blank') {
-            blockAction(event, `Are you sure you want to open this link in a new tab?\n\n${event.target.href}`);
+            event.preventDefault();
+            createPopup(`Are you sure you want to open this link in a new tab?\n\n${event.target.href}`, (confirmed) => {
+                if (confirmed) {
+                    window.open(event.target.href, '_blank');
+                }
+            });
         }
-    });
+    }
 
     // Inject the CSS for the popup
     injectCSS(popupCSS);
+
+    // Add event listeners to block redirects and new tabs
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleLinkClick);
 })();
