@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.4
-// @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action.
+// @version      1.5
+// @description  Blocks website redirects or new tabs and provides a confirmation dialog to accept or deny the action with the redirect URL displayed clearly.
 // @author       Your Name
 // @match        *://*/*
 // @exclude      *://www.google.com/*
@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    // Function to handle beforeunload event
+    // Handle beforeunload event to block page unloads
     function handleBeforeUnload(event) {
         event.preventDefault();
         event.returnValue = '';
@@ -29,7 +29,7 @@
         }
     }
 
-    // Function to handle link clicks
+    // Handle link clicks to block opening in new tabs
     function handleLinkClick(event) {
         if (event.target.tagName === 'A' && event.target.target === '_blank') {
             event.preventDefault();
@@ -41,7 +41,7 @@
         }
     }
 
-    // Function to handle form submissions
+    // Handle form submissions to block form submits
     function handleFormSubmit(event) {
         event.preventDefault();
         const message = `Are you sure you want to submit this form?\n\n${event.target.action}`;
@@ -54,19 +54,10 @@
     // Attach event listeners to existing elements
     function attachEventListeners() {
         window.addEventListener('beforeunload', handleBeforeUnload);
-        document.addEventListener('click', handleLinkClick);
-        document.addEventListener('submit', handleFormSubmit);
-    }
-
-    // Attach event listeners to dynamically created elements
-    function observeDOMChanges() {
-        const observer = new MutationObserver(() => {
-            attachEventListeners();
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+        document.addEventListener('click', handleLinkClick, true);
+        document.addEventListener('submit', handleFormSubmit, true);
     }
 
     // Initial setup
     attachEventListeners();
-    observeDOMChanges();
 })();
