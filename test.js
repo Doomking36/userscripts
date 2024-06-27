@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Strict Block Redirects and New Tabs
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Strictly block redirects and new tabs, allow user to decide, with a list of trusted domains
 // @author       Your Name
 // @match        *://*/*
@@ -123,7 +123,7 @@
     setInterval(() => {
         const currentHref = window.location.href;
         handleLocationChange(currentHref);
-    }, 500);
+    }, 100);
 
     // Additional event listeners for other potential redirects
     ['beforeunload', 'unload', 'popstate', 'hashchange'].forEach((eventType) => {
@@ -146,5 +146,19 @@
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
+
+    // Listen for URL changes through pushState and replaceState
+    ['pushState', 'replaceState'].forEach((method) => {
+        const originalMethod = history[method];
+        history[method] = function(state, title, url) {
+            if (url && !isTrustedDomain(url)) {
+                if (confirm(`The website is attempting to redirect to:\n\n${url}\n\nDo you want to proceed?`)) {
+                    return originalMethod.apply(history, arguments);
+                }
+            } else {
+                return originalMethod.apply(history, arguments);
+            }
+        };
+    });
 
 })();
