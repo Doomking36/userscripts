@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Strict Block Redirects and New Tabs
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @description  Strictly block redirects and new tabs, allow user to decide, with a list of trusted domains
 // @author       Your Name
 // @match        *://*/*
@@ -24,9 +24,10 @@
         if (!isTrustedDomain(url)) {
             if (!confirm(`The website is attempting to redirect to:\n\n${url}\n\nDo you want to proceed?`)) {
                 window.stop();
-                throw new Error(`Blocked redirect to: ${url}`);
+                return false;
             }
         }
+        return true;
     }
 
     function interceptEvent(event) {
@@ -34,49 +35,58 @@
         if (url && !isTrustedDomain(url)) {
             event.preventDefault();
             event.stopImmediatePropagation();
-            confirmRedirect(url);
+            if (confirmRedirect(url)) {
+                window.location.href = url;
+            }
         }
     }
 
-    // Intercept click and submit events
+    // Listen for click events on links
     document.addEventListener('click', function(event) {
-        if (event.target.tagName === 'A' || event.target.closest('a')) {
+        const link = event.target.closest('a');
+        if (link) {
             interceptEvent(event);
         }
     }, true);
 
+    // Listen for form submissions
     document.addEventListener('submit', function(event) {
-        if (event.target.tagName === 'FORM' || event.target.closest('form')) {
+        if (event.target.tagName === 'FORM') {
             interceptEvent(event);
         }
     }, true);
 
-    // Intercept window.open
+    // Intercept window open
     const originalWindowOpen = window.open;
     window.open = function(url, ...rest) {
-        confirmRedirect(url);
-        return originalWindowOpen.call(window, url, ...rest);
+        if (confirmRedirect(url)) {
+            return originalWindowOpen.call(window, url, ...rest);
+        }
+        return null;
     };
 
     // Intercept location change methods
     const originalLocationAssign = window.location.assign;
     window.location.assign = function(url) {
-        confirmRedirect(url);
-        return originalLocationAssign.call(window.location, url);
+        if (confirmRedirect(url)) {
+            return originalLocationAssign.call(window.location, url);
+        }
     };
 
     const originalLocationReplace = window.location.replace;
     window.location.replace = function(url) {
-        confirmRedirect(url);
-        return originalLocationReplace.call(window.location, url);
+        if (confirmRedirect(url)) {
+            return originalLocationReplace.call(window.location, url);
+        }
     };
 
-    // Monitor changes to location.href
+    // Monitor changes to the href attribute of the window location
     const originalSetHref = Object.getOwnPropertyDescriptor(window.location.__proto__, 'href').set;
     Object.defineProperty(window.location.__proto__, 'href', {
         set: function(url) {
-            confirmRedirect(url);
-            originalSetHref.call(window.location, url);
+            if (confirmRedirect(url)) {
+                originalSetHref.call(window.location, url);
+            }
         }
     });
 
@@ -84,8 +94,9 @@
     ['pushState', 'replaceState'].forEach(method => {
         const originalMethod = history[method];
         history[method] = function(state, title, url) {
-            if (url) confirmRedirect(url);
-            return originalMethod.apply(history, arguments);
+            if (confirmRedirect(url)) {
+                return originalMethod.apply(history, arguments);
+            }
         };
     });
 
