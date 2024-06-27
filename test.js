@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Strict Block Redirects and New Tabs
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Strictly block redirects and new tabs, allow user to decide, with a list of trusted domains
 // @author       Your Name
 // @match        *://*/*
@@ -28,6 +28,15 @@
 
             if (confirm(`The website is attempting to redirect or open a new tab to:\n\n${url}\n\nDo you want to proceed?`)) {
                 window.location.href = url;
+            }
+        }
+    }
+
+    function handleLocationChange(url) {
+        if (!isTrustedDomain(url)) {
+            if (!confirm(`The website is attempting to redirect to:\n\n${url}\n\nDo you want to proceed?`)) {
+                window.stop();
+                throw new Error(`Blocked redirect to: ${url}`);
             }
         }
     }
@@ -59,7 +68,7 @@
         return originalWindowOpen.call(window, url, ...rest);
     };
 
-    // Intercept location change
+    // Intercept location change methods
     const originalLocationAssign = window.location.assign;
     window.location.assign = function(url) {
         if (!isTrustedDomain(url)) {
@@ -110,16 +119,6 @@
         };
     });
 
-    // Function to handle location changes
-    function handleLocationChange(url) {
-        if (!isTrustedDomain(url)) {
-            if (!confirm(`The website is attempting to redirect to:\n\n${url}\n\nDo you want to proceed?`)) {
-                window.stop();
-                throw new Error(`Blocked redirect to: ${url}`);
-            }
-        }
-    }
-
     // Continuously monitor location changes
     setInterval(() => {
         const currentHref = window.location.href;
@@ -132,5 +131,20 @@
             handleLocationChange(window.location.href);
         }, true);
     });
+
+    // MutationObserver to monitor dynamic changes
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length) {
+                Array.from(mutation.addedNodes).forEach((node) => {
+                    if (node.tagName === 'A' || node.tagName === 'FORM') {
+                        interceptEvent({ target: node });
+                    }
+                });
+            }
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 
 })();
