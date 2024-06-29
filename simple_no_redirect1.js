@@ -1,9 +1,8 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with URL Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Block websites from redirecting or opening new tabs with URL confirmation
-// @author       Your Name
+// @version      1.2
+// @description  Block websites from redirecting or opening new tabs with URL confirmation and stricter control
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
@@ -34,15 +33,15 @@
         }
     }, true);
 
-    // Block other possible methods to open new tabs with user confirmation and URL display
+    // Strictly block other possible methods to open new tabs with user confirmation and URL display
     const open = window.open;
-    window.open = function(url) {
+    window.open = function(url, name, specs) {
         const confirmationMessage = `This page is trying to open a new tab to the URL: ${url}. Do you want to allow it?`;
         const userChoice = confirm(confirmationMessage);
         if (!userChoice) {
             return null;
         } else {
-            return open.apply(window, arguments);
+            return open.call(window, url, name, specs);
         }
     };
 
@@ -76,15 +75,4 @@
 
     observer.observe(document, { childList: true, subtree: true });
 
-    // Block window.open directly in case it's called outside of event listeners
-    const openDirect = window.open;
-    window.open = function() {
-        const confirmationMessage = 'This page is trying to open a new tab. Do you want to allow it?';
-        const userChoice = confirm(confirmationMessage);
-        if (!userChoice) {
-            return null;
-        } else {
-            return openDirect.apply(window, arguments);
-        }
-    };
 })();
