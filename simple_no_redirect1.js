@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with URL Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Block websites from redirecting or opening new tabs with URL confirmation
 // @author       Your Name
 // @match        *://*/*
@@ -56,4 +56,35 @@
             event.stopPropagation();
         }
     }, true);
+
+    // Use MutationObserver to prevent the creation of new iframes or popups
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.tagName === 'IFRAME' || node.tagName === 'FORM') {
+                        const confirmationMessage = `This page is trying to add an element that may open a new tab or redirect. Do you want to allow it?`;
+                        const userChoice = confirm(confirmationMessage);
+                        if (!userChoice) {
+                            node.remove();
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    observer.observe(document, { childList: true, subtree: true });
+
+    // Block window.open directly in case it's called outside of event listeners
+    const openDirect = window.open;
+    window.open = function() {
+        const confirmationMessage = 'This page is trying to open a new tab. Do you want to allow it?';
+        const userChoice = confirm(confirmationMessage);
+        if (!userChoice) {
+            return null;
+        } else {
+            return openDirect.apply(window, arguments);
+        }
+    };
 })();
