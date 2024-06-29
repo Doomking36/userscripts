@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with URL Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Block websites from redirecting or opening new tabs with URL confirmation
 // @author       Your Name
 // @match        *://*/*
@@ -27,6 +27,25 @@
             return false;
         }
     });
+
+    // Monitor and block pushState and replaceState to handle single page applications (SPA) redirects
+    const originalPushState = history.pushState;
+    history.pushState = function(state, title, url) {
+        const userChoice = confirmAction('This page is trying to change the URL', url);
+        if (userChoice) {
+            return originalPushState.apply(history, arguments);
+        }
+        return null;
+    };
+
+    const originalReplaceState = history.replaceState;
+    history.replaceState = function(state, title, url) {
+        const userChoice = confirmAction('This page is trying to replace the URL', url);
+        if (userChoice) {
+            return originalReplaceState.apply(history, arguments);
+        }
+        return null;
+    };
 
     // Block click events that attempt to open new tabs with user confirmation and URL display
     document.addEventListener('click', function(event) {
@@ -92,6 +111,34 @@
         attributes: true,
         subtree: true,
         attributeFilter: ['target']
+    });
+
+    // Block automatic redirects via location changes with user confirmation
+    const originalLocationAssign = window.location.assign;
+    window.location.assign = function(url) {
+        const userChoice = confirmAction('This page is trying to redirect to the URL', url);
+        if (userChoice) {
+            return originalLocationAssign.apply(window.location, arguments);
+        }
+        return null;
+    };
+
+    const originalLocationReplace = window.location.replace;
+    window.location.replace = function(url) {
+        const userChoice = confirmAction('This page is trying to replace the URL', url);
+        if (userChoice) {
+            return originalLocationReplace.apply(window.location, arguments);
+        }
+        return null;
+    };
+
+    Object.defineProperty(window.location, 'href', {
+        set: function(url) {
+            const userChoice = confirmAction('This page is trying to change the URL to', url);
+            if (userChoice) {
+                window.location.assign(url);
+            }
+        }
     });
 
 })();
