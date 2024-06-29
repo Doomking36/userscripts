@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Block Redirects and New Tabs with URL Confirmation
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Block websites from redirecting or opening new tabs with URL confirmation
 // @author       Your Name
 // @match        *://*/*
@@ -30,27 +30,37 @@
 
     // Block click events that attempt to open new tabs with user confirmation and URL display
     document.addEventListener('click', function(event) {
-        if (event.target.tagName === 'A' && event.target.target === '_blank') {
+        const target = event.target.closest('a[target="_blank"], area[target="_blank"]');
+        if (target) {
             event.preventDefault();
-            const userChoice = confirmAction('This page is trying to open a new tab to the URL', event.target.href);
+            const userChoice = confirmAction('This page is trying to open a new tab to the URL', target.href);
             if (userChoice) {
-                window.open(event.target.href);
+                window.open(target.href, '_blank');
             }
         }
     }, true);
 
     // Block other possible methods to open new tabs with user confirmation and URL display
-    const open = window.open;
-    window.open = function(url) {
+    const originalOpen = window.open;
+    window.open = function(url, name, specs) {
         const userChoice = confirmAction('This page is trying to open a new tab to the URL', url);
         if (userChoice) {
-            return open.apply(window, arguments);
-        } else {
-            return null;
+            return originalOpen.apply(window, arguments);
         }
+        return null;
     };
 
-    // Monitor for the use of HTML <a> tags with target="_blank" set dynamically
+    // Block form submissions that might cause redirects with user confirmation and URL display
+    document.addEventListener('submit', function(event) {
+        const formAction = event.target.action || document.location.href;
+        const userChoice = confirmAction('This page is trying to submit a form to the URL', formAction);
+        if (!userChoice) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+
+    // Monitor for dynamically added or modified elements that might open new tabs
     const observer = new MutationObserver(mutations => {
         mutations.forEach(mutation => {
             if (mutation.type === 'childList') {
@@ -60,7 +70,7 @@
                             event.preventDefault();
                             const userChoice = confirmAction('This page is trying to open a new tab to the URL', node.href);
                             if (userChoice) {
-                                window.open(node.href);
+                                window.open(node.href, '_blank');
                             }
                         });
                     }
@@ -70,7 +80,7 @@
                     event.preventDefault();
                     const userChoice = confirmAction('This page is trying to open a new tab to the URL', mutation.target.href);
                     if (userChoice) {
-                        window.open(mutation.target.href);
+                        window.open(mutation.target.href, '_blank');
                     }
                 });
             }
@@ -84,13 +94,4 @@
         attributeFilter: ['target']
     });
 
-    // Block form submissions that might cause redirects with user confirmation and URL display
-    document.addEventListener('submit', function(event) {
-        const formAction = event.target.action || document.location.href;
-        const userChoice = confirmAction('This page is trying to submit a form to the URL', formAction);
-        if (!userChoice) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-    }, true);
 })();
