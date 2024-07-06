@@ -10,15 +10,15 @@
 (function() {
     'use strict';
 
-    async function getActualUrl(href) {
-        try {
-            const response = await fetch(href, { redirect: 'manual' });
-            const actualUrl = response.url;
-            return actualUrl;
-        } catch (error) {
-            console.error('Error fetching URL:', error);
-            return href;
-        }
+    function getFinalUrl(href, callback) {
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: href,
+            followRedirects: true,
+            onload: function(response) {
+                callback(response.finalUrl);
+            }
+        });
     }
 
     function isSameHostname(href) {
@@ -41,20 +41,21 @@
     }
 
     async function setupEventListeners() {
-        document.addEventListener('click', async function(event) {
+        document.addEventListener('click', function(event) {
             const link = event.target.closest('a');
             if (link && link.href) {
                 event.preventDefault();
                 event.stopPropagation();
                 event.stopImmediatePropagation();
 
-                const actualUrl = await getActualUrl(link.href);
-                if (isSameHostname(actualUrl)) {
-                    console.log(actualUrl);
-                } else {
-                    displayURL(actualUrl);
-                }
-                addFinalUrlLink(link, actualUrl);
+                getFinalUrl(link.href, function(actualUrl) {
+                    if (isSameHostname(actualUrl)) {
+                        console.log(actualUrl);
+                    } else {
+                        displayURL(actualUrl);
+                    }
+                    addFinalUrlLink(link, actualUrl);
+                });
             }
         }, true);
     }
