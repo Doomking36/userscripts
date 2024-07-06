@@ -14,15 +14,9 @@
         GM_xmlhttpRequest({
             method: "GET",
             url: url,
-            headers: {
-                "User-Agent": navigator.userAgent
-            },
             onload: function(response) {
-                if (response.finalUrl) {
-                    callback(response.finalUrl);
-                } else {
-                    callback(url);
-                }
+                const finalUrl = response.finalUrl || url;
+                callback(finalUrl);
             },
             onerror: function() {
                 callback(url);
@@ -40,17 +34,8 @@
         window.open(url, '_blank');
     }
 
-    function addFinalUrlLink(node, finalUrl) {
-        const link = document.createElement('a');
-        link.href = finalUrl;
-        link.textContent = "Final URL";
-        link.target = "_blank";
-        link.style.color = 'red';
-        node.parentElement.appendChild(link);
-    }
-
     async function setupEventListeners() {
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', async function(event) {
             const link = event.target.closest('a');
             if (link && link.href) {
                 event.preventDefault();
@@ -63,7 +48,6 @@
                     } else {
                         displayURL(actualUrl);
                     }
-                    addFinalUrlLink(link, actualUrl);
                 });
             }
         }, true);
