@@ -3,22 +3,29 @@
 // @version      0.13
 // @description  Prevents redirects, handles multiple /out/ redirects, and opens links in new tabs w/o permission
 // @match        *://*/*
-// @grant        GM_xmlhttpRequest
-// @connect      *
+// @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    function getFinalUrl(href, callback) {
-        GM_xmlhttpRequest({
-            method: "GET",
-            url: href,
-            followRedirects: true,
-            onload: function(response) {
-                callback(response.finalUrl);
+    async function getFinalUrl(url) {
+        let response;
+        let redirectCount = 0;
+        const maxRedirects = 10;
+
+        while (redirectCount < maxRedirects) {
+            response = await fetch(url, { method: 'HEAD', redirect: 'manual' });
+
+            if (!response.headers.has('Location')) {
+                break;
             }
-        });
+
+            url = new URL(response.headers.get('Location'), url).href;
+            redirectCount++;
+        }
+
+        return url;
     }
 
     function isSameHostname(href) {
@@ -41,21 +48,20 @@
     }
 
     async function setupEventListeners() {
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', async function(event) {
             const link = event.target.closest('a');
             if (link && link.href) {
                 event.preventDefault();
                 event.stopPropagation();
                 event.stopImmediatePropagation();
 
-                getFinalUrl(link.href, function(actualUrl) {
-                    if (isSameHostname(actualUrl)) {
-                        console.log(actualUrl);
-                    } else {
-                        displayURL(actualUrl);
-                    }
-                    addFinalUrlLink(link, actualUrl);
-                });
+                const actualUrl = await getFinalUrl(link.href);
+                if (isSameHostname(actualUrl)) {
+                    console.log(actualUrl);
+                } else {
+                    displayURL(actualUrl);
+                }
+                addFinalUrlLink(link, actualUrl);
             }
         }, true);
     }
