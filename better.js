@@ -55,11 +55,15 @@
                 event.stopPropagation();
                 event.stopImmediatePropagation();
 
-                const actualUrl = await getFinalUrl(link.href);
-                if (isSameHostname(actualUrl)) {
-                    console.log(actualUrl);
-                } else {
-                    displayURL(actualUrl);
+                try {
+                    const actualUrl = await getFinalUrl(link.href);
+                    if (isSameHostname(actualUrl)) {
+                        console.log(actualUrl);
+                    } else {
+                        displayURL(actualUrl);
+                    }
+                } catch (error) {
+                    console.error('Error processing URL:', error);
                 }
             }
         }, true);
