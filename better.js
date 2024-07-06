@@ -13,22 +13,28 @@
         let response;
         let redirectCount = 0;
         const maxRedirects = 10;
+        let lastUrl = url;
 
         while (redirectCount < maxRedirects) {
-            response = await fetch(url, {
-                method: 'HEAD',
-                redirect: 'manual'
-            });
+            try {
+                response = await fetch(lastUrl, {
+                    method: 'GET',
+                    redirect: 'manual'
+                });
 
-            if (response.status >= 300 && response.status < 400 && response.headers.get('Location')) {
-                url = new URL(response.headers.get('Location'), url).href;
-                redirectCount++;
-            } else {
+                if (response.status >= 300 && response.status < 400 && response.headers.get('Location')) {
+                    lastUrl = new URL(response.headers.get('Location'), lastUrl).href;
+                    redirectCount++;
+                } else {
+                    break;
+                }
+            } catch (error) {
+                console.error('Error fetching URL:', error);
                 break;
             }
         }
 
-        return url;
+        return lastUrl;
     }
 
     function isSameHostname(href) {
