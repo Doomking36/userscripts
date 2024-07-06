@@ -3,32 +3,31 @@
 // @version      0.13
 // @description  Prevents redirects, handles multiple /out/ redirects, and opens links in new tabs w/o permission
 // @match        *://*/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      *
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    async function getFinalUrl(url) {
-        let response;
-        let redirectCount = 0;
-        const maxRedirects = 10;
-
-        while (redirectCount < maxRedirects) {
-            response = await fetch(url, {
-                method: 'HEAD',
-                redirect: 'manual'
-            });
-
-            if (!response.headers.has('Location')) {
-                break;
+    function getFinalUrl(url, callback) {
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: url,
+            headers: {
+                "User-Agent": navigator.userAgent
+            },
+            onload: function(response) {
+                if (response.finalUrl) {
+                    callback(response.finalUrl);
+                } else {
+                    callback(url);
+                }
+            },
+            onerror: function() {
+                callback(url);
             }
-
-            url = new URL(response.headers.get('Location'), url).href;
-            redirectCount++;
-        }
-
-        return url;
+        });
     }
 
     function isSameHostname(href) {
@@ -51,20 +50,21 @@
     }
 
     async function setupEventListeners() {
-        document.addEventListener('click', async function(event) {
+        document.addEventListener('click', function(event) {
             const link = event.target.closest('a');
             if (link && link.href) {
                 event.preventDefault();
                 event.stopPropagation();
                 event.stopImmediatePropagation();
 
-                const actualUrl = await getFinalUrl(link.href);
-                if (isSameHostname(actualUrl)) {
-                    console.log(actualUrl);
-                } else {
-                    displayURL(actualUrl);
-                }
-                addFinalUrlLink(link, actualUrl);
+                getFinalUrl(link.href, function(actualUrl) {
+                    if (isSameHostname(actualUrl)) {
+                        console.log(actualUrl);
+                    } else {
+                        displayURL(actualUrl);
+                    }
+                    addFinalUrlLink(link, actualUrl);
+                });
             }
         }, true);
     }
