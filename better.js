@@ -15,7 +15,10 @@
         const maxRedirects = 10;
 
         while (redirectCount < maxRedirects) {
-            response = await fetch(url, { method: 'HEAD', redirect: 'manual' });
+            response = await fetch(url, {
+                method: 'HEAD',
+                redirect: 'manual'
+            });
 
             if (!response.headers.has('Location')) {
                 break;
