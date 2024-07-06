@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Stop Redirect with Multiple Redirect Handling
-// @version      0.14
+// @version      0.15
 // @description  Prevents redirects, handles multiple /out/ redirects, and opens links in new tabs w/o permission
 // @match        *://*/*
 // @grant        none
@@ -19,44 +19,23 @@
         window.open(url, '_blank');
     }
 
-    function createIframe(url) {
-        return new Promise((resolve, reject) => {
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = url;
+    function handleClick(event) {
+        const link = event.target.closest('a');
+        if (link && link.href) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
 
-            iframe.onload = function() {
-                resolve(iframe.contentWindow.location.href);
-            };
-
-            iframe.onerror = function() {
-                reject(new Error('Error loading iframe'));
-            };
-
-            document.body.appendChild(iframe);
-        });
+            if (isSameHostname(link.href)) {
+                console.log(link.href);
+            } else {
+                displayURL(link.href);
+            }
+        }
     }
 
-    async function setupEventListeners() {
-        document.addEventListener('click', async function(event) {
-            const link = event.target.closest('a');
-            if (link && link.href) {
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-
-                try {
-                    const actualUrl = await createIframe(link.href);
-                    if (isSameHostname(actualUrl)) {
-                        console.log(actualUrl);
-                    } else {
-                        displayURL(actualUrl);
-                    }
-                } catch (error) {
-                    console.error('Error processing URL:', error);
-                }
-            }
-        }, true);
+    function setupEventListeners() {
+        document.addEventListener('click', handleClick, true);
     }
 
     setupEventListeners();
