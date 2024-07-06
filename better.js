@@ -3,25 +3,32 @@
 // @version      0.13
 // @description  Prevents redirects, handles multiple /out/ redirects, and opens links in new tabs w/o permission
 // @match        *://*/*
-// @grant        GM_xmlhttpRequest
-// @connect      *
+// @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    function getFinalUrl(url, callback) {
-        GM_xmlhttpRequest({
-            method: "GET",
-            url: url,
-            onload: function(response) {
-                const finalUrl = response.finalUrl || url;
-                callback(finalUrl);
-            },
-            onerror: function() {
-                callback(url);
+    async function getFinalUrl(url) {
+        let response;
+        let redirectCount = 0;
+        const maxRedirects = 10;
+
+        while (redirectCount < maxRedirects) {
+            response = await fetch(url, {
+                method: 'HEAD',
+                redirect: 'manual'
+            });
+
+            if (response.status >= 300 && response.status < 400 && response.headers.get('Location')) {
+                url = new URL(response.headers.get('Location'), url).href;
+                redirectCount++;
+            } else {
+                break;
             }
-        });
+        }
+
+        return url;
     }
 
     function isSameHostname(href) {
@@ -42,13 +49,12 @@
                 event.stopPropagation();
                 event.stopImmediatePropagation();
 
-                getFinalUrl(link.href, function(actualUrl) {
-                    if (isSameHostname(actualUrl)) {
-                        console.log(actualUrl);
-                    } else {
-                        displayURL(actualUrl);
-                    }
-                });
+                const actualUrl = await getFinalUrl(link.href);
+                if (isSameHostname(actualUrl)) {
+                    console.log(actualUrl);
+                } else {
+                    displayURL(actualUrl);
+                }
             }
         }, true);
     }
